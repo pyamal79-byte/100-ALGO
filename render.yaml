@@ -8,9 +8,9 @@ services:
     startCommand: node --loader tsx/esm server.ts
     envVars:
       - key: GEMINI_API_KEY
-        value: AIzaSyBnQbrXYbrwB2GvkDCSCBd284DT_EnPMAQ
+        sync: false
       - key: FOOTBALL_DATA_KEY
-        value: b59ca296256c46b3bdda386be1844efd
+        sync: false
       - key: NODE_ENV
         value: production
       - key: PORT
