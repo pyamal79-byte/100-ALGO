@@ -21,3 +21,16 @@ app.use(express.json());
 
 const FOOTBALL_DATA_KEY = process.env.FOOTBALL_DATA_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+// Serve static files from the dist folder
+const distPath = path.resolve(process.cwd(), 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+});
