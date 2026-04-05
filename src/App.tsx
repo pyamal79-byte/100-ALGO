@@ -561,7 +561,7 @@ const StandingsView = ({ sport, league }: { sport: Sport, league: string }) => {
                     <td className="px-6 py-4 text-right font-bold text-white">{row.points}</td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex justify-center gap-1">
-                        {row.form?.split(',').map((f: string, i: number) => (
+                        {(row.form || '').split(',').map((f: string, i: number) => (
                           <FormBadge key={i} result={f} />
                         ))}
                       </div>
