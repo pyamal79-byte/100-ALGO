@@ -513,7 +513,7 @@ const StandingsView = ({ sport, league }: { sport: Sport, league: string }) => {
     <div className="p-8 flex-1 overflow-y-auto">
       <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
         <ListOrdered className="w-6 h-6 text-emerald-500" />
-        Classement {league === 'Toutes' ? '(Ligue des Champions)' : `- ${league}`}
+             Classements {league === 'Toutes' ? '(Ligue des Champions)' : `- ${league}`}
       </h2>
       
       {loading ? (
@@ -839,7 +839,7 @@ const DashboardView = ({ sport, league, onAnalyze }: { sport: Sport, league: str
                 }`}
               >
                 <span className="text-xs font-medium uppercase mb-1">
-                  {isToday ? "Auj." : date.toLocaleDateString('fr-FR', { weekday: 'short' })}
+                 {isToday ? "Auj." : ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'][date.getDay()]} 
                 </span>
                 <span className={`text-xl lg:text-2xl font-bold ${isSelected ? 'text-emerald-400' : 'text-gray-300'}`}>
                   {date.getDate()}
@@ -960,10 +960,10 @@ export default function App() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span className="text-xs sm:text-sm font-medium">Algo Connecté</span>
+             <span className="text-xs sm:text-sm font-medium">API Active</span>
             </div>
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center font-bold text-xs sm:text-sm">
-              PA
+              AL
             </div>
           </div>
         </header>
