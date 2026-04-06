@@ -210,7 +210,7 @@ const Sidebar = ({
   viewMode: ViewMode, setViewMode: (v: ViewMode) => void,
   isOpen: boolean, setIsOpen: (o: boolean) => void
 }) => {
-  const FOOTBALL_LEAGUES = ['Toutes', 'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1', 'Champions League'];
+  const FOOTBALL_LEAGUES = ['Toutes', 'Champions League', 'Europa League', 'Europa Conference League', 'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1', 'Primeira Liga (Portugal)', 'Eredivisie (Pays-Bas)', 'Championship (Angleterre)'];
   const BASKETBALL_LEAGUES = ['Toutes', 'NBA', 'Euroleague'];
   const currentLeagues = sport === 'FOOTBALL' ? FOOTBALL_LEAGUES : BASKETBALL_LEAGUES;
 
@@ -968,22 +968,19 @@ export default function App() {
           </div>
         </header>
 
-        {/* Content Area based on ViewMode */}
-        {viewMode === 'DASHBOARD' && (
-          <DashboardView 
-            sport={sport} 
-            league={league} 
-            onAnalyze={(match) => {
-              setSelectedMatch(match);
-              // Optionnel: si on veut basculer sur la vue MATCHES ou juste ouvrir la modale
-              // setViewMode('MATCHES'); 
-            }} 
-          />
-        )}
-
-        {viewMode === 'STANDINGS' && <StandingsView sport={sport} league={league} />}
-        {viewMode === 'ANALYSIS' && <AnalysisView sport={sport} league={league} />}
-        {viewMode === 'MATCHES' && <MatchesView sport={sport} league={league} />}
+                {/* Content Area based on ViewMode — BUG ÉCRAN NOIR CORRIGÉ */}
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+          {viewMode === 'DASHBOARD' && (
+            <DashboardView
+              sport={sport}
+              league={league}
+              onAnalyze={(match) => setSelectedMatch(match)}
+            />
+          )}
+          {viewMode === 'STANDINGS' && <StandingsView sport={sport} league={league} />}
+          {viewMode === 'ANALYSIS'  && <AnalysisView  sport={sport} league={league} />}
+          {viewMode === 'MATCHES'   && <MatchesView   sport={sport} league={league} />}
+        </div>
 
       </main>
 
