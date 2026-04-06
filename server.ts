@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import dns from 'dns';
-import { GoogleGenAI } from '@google/genai';
+import Groq from 'groq-sdk';
 
 dns.setDefaultResultOrder('ipv4first');
 dotenv.config();
@@ -19,11 +19,12 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 app.use(express.json());
 
 const FOOTBALL_DATA_KEY = process.env.FOOTBALL_DATA_KEY;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+
+const groqClient = GROQ_API_KEY ? new Groq({ apiKey: GROQ_API_KEY }) : null;
 
 const FOOTBALL_BASE_URL = 'https://api.football-data.org/v4';
 
-// Helper: fetch from football-data.org
 async function footballFetch(endpoint: string): Promise<any> {
   const url = `${FOOTBALL_BASE_URL}${endpoint}`;
   const res = await fetch(url, {
@@ -31,14 +32,12 @@ async function footballFetch(endpoint: string): Promise<any> {
   });
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Football API error ${res.status}: ${errText}`);
+    throw new Error(`Football API Error ${res.status}: ${errText}`);
   }
   return res.json();
 }
 
-// --- API ROUTES ---
-
-// GET /api/standings/:code - Classement d'une competition
+// GET /api/standings/:code
 app.get('/api/standings/:code', async (req, res) => {
   try {
     const { code } = req.params;
@@ -51,7 +50,7 @@ app.get('/api/standings/:code', async (req, res) => {
   }
 });
 
-// GET /api/matches/:code - Matchs a venir d'une competition
+// GET /api/matches/:code
 app.get('/api/matches/:code', async (req, res) => {
   try {
     const { code } = req.params;
@@ -65,25 +64,29 @@ app.get('/api/matches/:code', async (req, res) => {
   }
 });
 
-// GET /api/match/:code/:matchId/analysis - Analyse IA d'un match
+// GET /api/match/:code/:matchId/analysis
 app.get('/api/match/:code/:matchId/analysis', async (req, res) => {
   try {
     const { code, matchId } = req.params;
     const matchData = await footballFetch(`/matches/${matchId}`);
-    const homeTeam = matchData.homeTeam?.name || 'Equipe Domicile';
-    const awayTeam = matchData.awayTeam?.name || 'Equipe Exterieur';
+    const homeTeam = matchData.homeTeam?.name || 'Home Team';
+    const awayTeam = matchData.awayTeam?.name || 'Away Team';
     const competition = matchData.competition?.name || code;
 
     let analysis = `Analyse du match ${homeTeam} vs ${awayTeam} en ${competition}.`;
 
-    if (GEMINI_API_KEY) {
+    if (groqClient) {
       try {
-        const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-        const prompt = `Tu es un expert en analyse football et paris sportifs. Analyse ce match: ${homeTeam} vs ${awayTeam} dans la competition ${competition}. Donne une analyse experte en francais incluant: forme recente des equipes, forces et faiblesses, prediction et conseil de pari. Sois precis et concis (300 mots max).`;
-        const result = await ai.models.generateContent({ model: 'gemini-2.0-flash', contents: prompt });
-        analysis = result.text || analysis;
+        const prompt = `Tu es un expert en analyse du football et des paris sportifs. Analysez ce match : ${homeTeam} vs ${awayTeam} dans la competition ${competition}. Donne une analyse experte en francais comprenant : forme recente des equipes, forces et faiblesses, prediction et conseil de pari. Sois precis et concis (300 mots max).`;
+        const completion = await groqClient.chat.completions.create({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 500,
+          temperature: 0.7
+        });
+        analysis = completion.choices[0]?.message?.content || analysis;
       } catch (aiErr: any) {
-        console.error('Gemini error:', aiErr.message);
+        console.error('Groq error:', aiErr.message);
       }
     }
 
@@ -94,12 +97,10 @@ app.get('/api/match/:code/:matchId/analysis', async (req, res) => {
   }
 });
 
-// GET /api/team/:code/:teamId/analysis - Analyse IA d'une equipe
+// GET /api/team/:code/:teamId/analysis
 app.get('/api/team/:code/:teamId/analysis', async (req, res) => {
   try {
     const { code, teamId } = req.params;
-
-    // Recuperer les stats de l'equipe dans le classement
     const standingsData = await footballFetch(`/competitions/${code}/standings`);
     const table = standingsData.standings?.[0]?.table || [];
     const teamRow = table.find((row: any) => row.team?.id === parseInt(teamId));
@@ -120,16 +121,20 @@ app.get('/api/team/:code/:teamId/analysis', async (req, res) => {
     } : null;
 
     const teamName = teamRow?.team?.name || `Equipe ${teamId}`;
-    let analysis = `Analyse de ${teamName}: Position ${stats?.position || 'N/A'}, ${stats?.points || 0} points en ${stats?.matches_played || 0} matchs.`;
+    let analysis = `Analyse de ${teamName}: Position ${stats?.position || 'N/A'}, ${stats?.points || 0} points.`;
 
-    if (GEMINI_API_KEY && stats) {
+    if (groqClient && stats) {
       try {
-        const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-        const prompt = `Tu es un expert en football et paris sportifs. Analyse l'equipe ${teamName} dans la competition ${code}. Statistiques: Position ${stats.position}, ${stats.points} pts, ${stats.matches_played} matchs joues, ${stats.won}V ${stats.draw}N ${stats.lost}D, ${stats.goals_for} buts marques, ${stats.goals_against} buts encaisses, forme: ${stats.form}. Donne une analyse experte en francais: forces, faiblesses, tendance, et recommandation paris sportifs (300 mots max).`;
-        const result = await ai.models.generateContent({ model: 'gemini-2.0-flash', contents: prompt });
-        analysis = result.text || analysis;
+        const prompt = `Tu es un expert en football et paris sportifs. Analysez l'equipe ${teamName} dans la competition ${code}. Statistiques: Position ${stats.position}, ${stats.points} pts, ${stats.matches_played} matchs joues, ${stats.won}V ${stats.draw}N ${stats.lost}D, ${stats.goals_for} buts marques, ${stats.goals_against} buts encaisses, forme: ${stats.form}. Donne une analyse experte en francais: forces, faiblesses, tendance, et recommandation paris sportifs (300 mots max).`;
+        const completion = await groqClient.chat.completions.create({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 500,
+          temperature: 0.7
+        });
+        analysis = completion.choices[0]?.message?.content || analysis;
       } catch (aiErr: any) {
-        console.error('Gemini error:', aiErr.message);
+        console.error('Groq error:', aiErr.message);
       }
     }
 
@@ -140,20 +145,25 @@ app.get('/api/team/:code/:teamId/analysis', async (req, res) => {
   }
 });
 
-// GET /api/competitions - Liste des competitions
+// GET /api/competitions
 app.get('/api/competitions', (req, res) => {
   res.json([
-    { name: 'Champions League', code: 'CL' },
+    { name: 'Ligue des Champions', code: 'CL' },
     { name: 'Premier League', code: 'PL' },
     { name: 'Ligue 1', code: 'FL1' },
     { name: 'Bundesliga', code: 'BL1' },
     { name: 'Serie A', code: 'SA' },
     { name: 'La Liga', code: 'PD' },
-    { name: 'Europa League', code: 'EL' }
+    { name: 'Ligue Europa', code: 'EL' },
+    { name: 'Europa Conference League', code: 'ECL' },
+    { name: 'Eredivisie', code: 'DED' },
+    { name: 'Primeira Liga', code: 'PPL' },
+    { name: 'Championship', code: 'ELC' },
+    { name: 'Ligue des Champions (AFC)', code: 'CLI' }
   ]);
 });
 
-// GET /api/alerts - Value bets du jour
+// GET /api/alerts
 app.get('/api/alerts', (req, res) => {
   const now = new Date();
   res.json([
@@ -176,7 +186,7 @@ app.get('/api/alerts', (req, res) => {
   ]);
 });
 
-// GET /api/stats - Statistiques globales
+// GET /api/stats
 app.get('/api/stats', (req, res) => {
   res.json({
     current_bankroll: 10540.20,
@@ -193,11 +203,11 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     football_api: FOOTBALL_DATA_KEY ? 'configured' : 'missing',
-    gemini_api: GEMINI_API_KEY ? 'configured' : 'missing'
+    groq_api: GROQ_API_KEY ? 'configured' : 'missing'
   });
 });
 
-// Serve static files from dist
+// Serve static files
 const distPath = path.resolve(process.cwd(), 'dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
@@ -209,5 +219,5 @@ if (fs.existsSync(distPath)) {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Football API: ${FOOTBALL_DATA_KEY ? 'OK' : 'MISSING'}`);
-  console.log(`Gemini API: ${GEMINI_API_KEY ? 'OK' : 'MISSING'}`);
+  console.log(`Groq API: ${GROQ_API_KEY ? 'OK' : 'MISSING'}`);
 });
