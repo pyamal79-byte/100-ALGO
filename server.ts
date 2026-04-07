@@ -65,33 +65,113 @@ app.get('/api/matches/:code', async (req, res) => {
 });
 
 // GET /api/match/:code/:matchId/analysis
+// GET /api/match/:code/:matchId/analysis
 app.get('/api/match/:code/:matchId/analysis', async (req, res) => {
   try {
     const { code, matchId } = req.params;
+    
+    // 1. Récupère les données du match
     const matchData = await footballFetch(`/matches/${matchId}`);
     const homeTeam = matchData.homeTeam?.name || 'Home Team';
     const awayTeam = matchData.awayTeam?.name || 'Away Team';
+    const homeTeamId = matchData.homeTeam?.id;
+    const awayTeamId = matchData.awayTeam?.id;
     const competition = matchData.competition?.name || code;
-
+    
     let analysis = `Analyse du match ${homeTeam} vs ${awayTeam} en ${competition}.`;
-
+    
     if (groqClient) {
       try {
-        const prompt = `Tu es un expert en analyse du football et des paris sportifs. Analysez ce match : ${homeTeam} vs ${awayTeam} dans la competition ${competition}. Donne une analyse experte en francais comprenant : forme recente des equipes, forces et faiblesses, prediction et conseil de pari. Sois precis et concis (300 mots max).`;
+        // 2. Récupère le classement pour avoir les stats des équipes
+        const standingsData = await footballFetch(`/competitions/${code}/standings`);
+        const table = standingsData.standings?.[0]?.table || [];
+        
+        const homeStats = table.find((row: any) => row.team?.id === homeTeamId);
+        const awayStats = table.find((row: any) => row.team?.id === awayTeamId);
+        
+        // 3. Récupère l'historique H2H (confrontations directes)
+        let h2hData = null;
+        try {
+          h2hData = await footballFetch(`/matches/${matchId}/head2head?limit=5`);
+        } catch (e) {
+          console.log('H2H non disponible');
+        }
+        
+        // 4. Construit un prompt enrichi avec TOUTES les données
+        const prompt = `Tu es un analyste sportif professionnel expert en football et paris sportifs.
+
+MATCH À ANALYSER : ${homeTeam} vs ${awayTeam}
+COMPÉTITION : ${competition}
+
+DONNÉES ÉQUIPE DOMICILE - ${homeTeam} :
+${homeStats ? `
+- Position au classement : ${homeStats.position}/${table.length}
+- Points : ${homeStats.points} pts (${homeStats.won}V ${homeStats.draw}N ${homeStats.lost}D)
+- Matchs joués : ${homeStats.playedGames}
+- Buts marqués : ${homeStats.goalsFor} (moyenne ${(homeStats.goalsFor/homeStats.playedGames).toFixed(2)}/match)
+- Buts encaissés : ${homeStats.goalsAgainst} (moyenne ${(homeStats.goalsAgainst/homeStats.playedGames).toFixed(2)}/match)
+- Différence de buts : ${homeStats.goalDifference}
+- Forme récente (5 derniers matchs) : ${homeStats.form || 'Non disponible'}
+` : 'Statistiques non disponibles'}
+
+DONNÉES ÉQUIPE EXTÉRIEUR - ${awayTeam} :
+${awayStats ? `
+- Position au classement : ${awayStats.position}/${table.length}
+- Points : ${awayStats.points} pts (${awayStats.won}V ${awayStats.draw}N ${awayStats.lost}D)
+- Matchs joués : ${awayStats.playedGames}
+- Buts marqués : ${awayStats.goalsFor} (moyenne ${(awayStats.goalsFor/awayStats.playedGames).toFixed(2)}/match)
+- Buts encaissés : ${awayStats.goalsAgainst} (moyenne ${(awayStats.goalsAgainst/awayStats.playedGames).toFixed(2)}/match)
+- Différence de buts : ${awayStats.goalDifference}
+- Forme récente (5 derniers matchs) : ${awayStats.form || 'Non disponible'}
+` : 'Statistiques non disponibles'}
+
+${h2hData && h2hData.matches?.length > 0 ? `
+CONFRONTATIONS DIRECTES (H2H - 5 derniers matchs) :
+${h2hData.matches.slice(0, 5).map((m: any, i: number) => 
+  `${i+1}. ${new Date(m.utcDate).toLocaleDateString('fr-FR')} : ${m.homeTeam.name} ${m.score.fullTime.home || '?'}-${m.score.fullTime.away || '?'} ${m.awayTeam.name}`
+).join('\n')}
+` : ''}
+
+MÉTHODOLOGIE D'ANALYSE REQUISE :
+1. Analyse comparative des forces et faiblesses des deux équipes
+2. Impact de la forme récente et du classement
+3. Analyse statistique (buts marqués/encaissés, différence de buts)
+4. Avantage domicile/extérieur
+5. Historique des confrontations directes (si disponible)
+
+PRÉDICTION DEMANDÉE :
+- Pronostic principal (Victoire ${homeTeam} / Match Nul / Victoire ${awayTeam})
+- Probabilité estimée (en %)
+- Conseil de pari avec niveau de confiance (Faible/Moyen/Élevé)
+- Autres paris potentiels (ex: Plus/Moins 2.5 buts, BTTS)
+
+Réponds en français de manière structurée, professionnelle et argumentée (400 mots max).`;
+
         const completion = await groqClient.chat.completions.create({
           model: 'llama-3.3-70b-versatile',
           messages: [{ role: 'user', content: prompt }],
-          max_tokens: 500,
+          max_tokens: 800,
           temperature: 0.7
         });
+        
         analysis = completion.choices[0]?.message?.content || analysis;
       } catch (aiErr: any) {
         console.error('Groq error:', aiErr.message);
       }
     }
-
-    res.json({ matchId, homeTeam, awayTeam, competition, analysis });
+    
+    res.json({
+      matchId,
+      homeTeam,
+      awayTeam,
+      competition,
+      analysis
+    });
   } catch (err: any) {
+    console.error('Match analysis error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
     console.error('Match analysis error:', err.message);
     res.status(500).json({ error: err.message });
   }
