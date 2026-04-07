@@ -8,7 +8,7 @@ import Groq from 'groq-sdk';
 dns.setDefaultResultOrder('ipv4first');
 dotenv.config();
 
-const backendEnvPath = path.resolve(process.cwd(), 'backend/.env');
+const backendEnvPath = path.resolve(process.cwd(), 'backend/.env');F
 if (fs.existsSync(backendEnvPath)) {
   const envConfig = dotenv.parse(fs.readFileSync(backendEnvPath));
   for (const k in envConfig) { process.env[k] = envConfig[k]; }
@@ -171,10 +171,7 @@ Réponds en français de manière structurée, professionnelle et argumentée (4
     res.status(500).json({ error: err.message });
   }
 });
-    console.error('Match analysis error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
+   
 
 // GET /api/team/:code/:teamId/analysis
 app.get('/api/team/:code/:teamId/analysis', async (req, res) => {
