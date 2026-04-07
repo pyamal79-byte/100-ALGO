@@ -234,7 +234,7 @@ const Sidebar = ({
       {isOpen && (
         <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setIsOpen(false)} />
       )}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gray-900 border-r border-gray-800 flex flex-col h-full shrink-0 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside className="static w-64 bg-gray-900 border-r border-gray-800 flex flex-col h-full shrink-0">
         <div className="p-6 border-b border-gray-800 flex justify-between items-center">
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
             <Activity className="text-emerald-500 h-6 w-6" />
