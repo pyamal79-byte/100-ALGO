@@ -62,9 +62,7 @@ app.get('/api/matches/:code', async (req, res) => {
     console.error('Matches error:', err.message);
     res.status(500).json({ error: err.message });
   }
-});
 
-// GET /api/match/:code/:matchId/analysis
 // GET /api/match/:code/:matchId/analysis
 app.get('/api/match/:code/:matchId/analysis', async (req, res) => {
   try {
