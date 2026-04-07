@@ -7,7 +7,30 @@ import {
 import { Match, Sport } from './types';
 import { mockMatches } from './data';
 import Markdown from 'react-markdown';
-
+// Protection contre les écrans noirs
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: string}> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: '' };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error: error.message };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{padding: '2rem', color: '#f87171', background: '#111', borderRadius: '12px', margin: '1rem'}}>
+          <h2>⚠️ Une erreur s'est produite</h2>
+          <p>{this.state.error}</p>
+          <button onClick={() => this.setState({hasError: false})} style={{marginTop:'1rem', padding:'0.5rem 1rem', background:'#10b981', color:'white', border:'none', borderRadius:'8px', cursor:'pointer'}}>
+            🔄 Réessayer
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 type ViewMode = 'DASHBOARD' | 'STANDINGS' | 'ANALYSIS' | 'MATCHES';
 
 // --- Composant: MatchesView ---
