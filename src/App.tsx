@@ -666,7 +666,6 @@ export default function App() {
   }, [sport, league]);
 
       return (
-    <ErrorBoundary>
     <div className="flex h-screen bg-gray-950 text-gray-100 overflow-hidden font-sans">
       <main className="flex-1 flex flex-col overflow-hidden w-full">
         <header className="h-20 border-b border-gray-800 bg-gray-950/50 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 shrink-0">
