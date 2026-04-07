@@ -665,9 +665,9 @@ export default function App() {
     });
   }, [sport, league]);
 
-  return (
+      return (
+    <ErrorBoundary>
     <div className="flex h-screen bg-gray-950 text-gray-100 overflow-hidden font-sans">
-      <Sidebar sport={sport} setSport={setSport} league={league} setLeague={setLeague} viewMode={viewMode} setViewMode={setViewMode} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
       <main className="flex-1 flex flex-col overflow-hidden w-full">
         <header className="h-20 border-b border-gray-800 bg-gray-950/50 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 shrink-0">
           <div className="flex items-center gap-4">
@@ -702,6 +702,7 @@ export default function App() {
         </div>
       </main>
       <MatchModal match={selectedMatch} onClose={() => setSelectedMatch(null)} />
-    </div>
+        </div>
+    </ErrorBoundary>
   );
 }
