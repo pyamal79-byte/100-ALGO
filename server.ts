@@ -8,7 +8,7 @@ import Groq from 'groq-sdk';
 dns.setDefaultResultOrder('ipv4first');
 dotenv.config();
 
-const backendEnvPath = path.resolve(process.cwd(), 'backend/.env');F
+const backendEnvPath = path.resolve(process.cwd(), 'backend/.env');
 if (fs.existsSync(backendEnvPath)) {
   const envConfig = dotenv.parse(fs.readFileSync(backendEnvPath));
   for (const k in envConfig) { process.env[k] = envConfig[k]; }
